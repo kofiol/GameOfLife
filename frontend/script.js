@@ -1,39 +1,73 @@
 // define constants
-const CELL_SIZE = 10; // size of each cell in pixels
-const GRID_WIDTH = 100; // number of cells horizontally
-const GRID_HEIGHT = 100; // number of cells vertically
-let fps = 10; // frames per second for the simulation
+const CELL_SIZE = 10;
+const GRID_WIDTH = 150;
+const GRID_HEIGHT = 100;
+let fps = 10;
+let zoom = 1;
+let offsetX = 0;
+let offsetY = 0;
+let isDragging = false;
 
 // get the canvas element and its drawing context
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-// set the canvas dimensions based on the grid size and cell size
 canvas.width = GRID_WIDTH * CELL_SIZE;
 canvas.height = GRID_HEIGHT * CELL_SIZE;
 
 // initialize the grid and running state
 let grid = createGrid(GRID_HEIGHT, GRID_WIDTH);
 let running = false;
-let showGrid = true; // flag to control grid visibility
+let showGrid = true;
 
-// set up event listeners for UI controls
+// set up event listeners for ui controls
 document.getElementById('startButton').addEventListener('click', toggleRunning);
 document.getElementById('resetButton').addEventListener('click', resetGrid);
 document.getElementById('fpsRange').addEventListener('input', (e) => fps = parseInt(e.target.value));
+document.getElementById('zoomRange').addEventListener('input', (e) => {
+    zoom = parseFloat(e.target.value);
+    drawGrid();
+});
 
-// event listener for the grid visibility toggle
 document.getElementById('gridToggle').addEventListener('change', (e) => {
     showGrid = e.target.checked;
-    drawGrid(); // redraw the grid with the updated visibility setting
+    drawGrid();
 });
 
 // event listener for canvas clicks to toggle cell state
-canvas.addEventListener('click', (event) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = Math.floor((event.clientX - rect.left) / CELL_SIZE);
-    const y = Math.floor((event.clientY - rect.top) / CELL_SIZE);
-    grid[y][x] = grid[y][x] === 1 ? 0 : 1; // toggle cell state between 0 (dead) and 1 (alive)
-    drawGrid(); // redraw the grid to reflect changes
+canvas.addEventListener('mousedown', (event) => {
+    if (event.button === 0) { // Left button
+        const rect = canvas.getBoundingClientRect();
+        const x = Math.floor((event.clientX - rect.left + offsetX) / (CELL_SIZE * zoom));
+        const y = Math.floor((event.clientY - rect.top + offsetY) / (CELL_SIZE * zoom));
+        grid[y][x] = grid[y][x] === 1 ? 0 : 1;
+        drawGrid();
+    } else if (event.button === 2) { // right button
+        isDragging = true;
+        canvas.style.cursor = 'grabbing';
+    }
+});
+
+canvas.addEventListener('mouseup', () => {
+    isDragging = false;
+    canvas.style.cursor = 'default';
+});
+
+canvas.addEventListener('mousemove', (event) => {
+    if (isDragging) {
+        offsetX += event.movementX;
+        offsetY += event.movementY;
+        drawGrid();
+    }
+});
+
+// event listener for mouse wheel to zoom
+canvas.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    const zoomFactor = 0.007; // smaller zoom step
+    zoom += event.deltaY * -zoomFactor;
+    zoom = Math.min(Math.max(zoom, 0.1), 5);
+    document.getElementById('zoomRange').value = zoom;
+    drawGrid();
 });
 
 // function to create a grid with all cells initialized to 0 (dead)
@@ -43,14 +77,14 @@ function createGrid(height, width) {
 
 // function to draw the grid on the canvas
 function drawGrid() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (let y = 0; y < GRID_HEIGHT; y++) {
         for (let x = 0; x < GRID_WIDTH; x++) {
-            ctx.fillStyle = grid[y][x] === 1 ? 'white' : 'black'; // cell color
-            ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE); // draw the cell
-            if (showGrid) { // draw grid lines based on the flag
-                ctx.strokeStyle = 'white'; // stroke color
-                ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE); // cell border
+            ctx.fillStyle = grid[y][x] === 1 ? 'white' : 'black';
+            ctx.fillRect((x * CELL_SIZE * zoom) + offsetX, (y * CELL_SIZE * zoom) + offsetY, CELL_SIZE * zoom, CELL_SIZE * zoom);
+            if (showGrid) {
+                ctx.strokeStyle = 'white';
+                ctx.strokeRect((x * CELL_SIZE * zoom) + offsetX, (y * CELL_SIZE * zoom) + offsetY, CELL_SIZE * zoom, CELL_SIZE * zoom);
             }
         }
     }
@@ -58,18 +92,18 @@ function drawGrid() {
 
 // function to update the grid based on the rules
 function updateGrid() {
-    const newGrid = createGrid(GRID_HEIGHT, GRID_WIDTH); // create a new grid for the next state
+    const newGrid = createGrid(GRID_HEIGHT, GRID_WIDTH);
     for (let y = 0; y < GRID_HEIGHT; y++) {
         for (let x = 0; x < GRID_WIDTH; x++) {
-            const aliveNeighbors = getAliveNeighbors(y, x); // count alive neighbors
+            const aliveNeighbors = getAliveNeighbors(y, x);
             if (grid[y][x] === 1) {
-                newGrid[y][x] = aliveNeighbors < 2 || aliveNeighbors > 3 ? 0 : 1; // apply rules for alive cells
+                newGrid[y][x] = aliveNeighbors < 2 || aliveNeighbors > 3 ? 0 : 1;
             } else {
-                newGrid[y][x] = aliveNeighbors === 3 ? 1 : 0; // apply rules for dead cells
+                newGrid[y][x] = aliveNeighbors === 3 ? 1 : 0;
             }
         }
     }
-    grid = newGrid; // update the grid to the new state
+    grid = newGrid;
 }
 
 // function to count alive neighbors around a cell
@@ -77,11 +111,11 @@ function getAliveNeighbors(y, x) {
     let count = 0;
     for (let i = -1; i <= 1; i++) {
         for (let j = -1; j <= 1; j++) {
-            if (i === 0 && j === 0) continue; // skip the cell itself
+            if (i === 0 && j === 0) continue;
             const newY = y + i;
             const newX = x + j;
             if (newY >= 0 && newY < GRID_HEIGHT && newX >= 0 && newX < GRID_WIDTH) {
-                count += grid[newY][newX]; // count alive neighbors
+                count += grid[newY][newX];
             }
         }
     }
@@ -91,18 +125,18 @@ function getAliveNeighbors(y, x) {
 // function to start or stop the simulation
 function toggleRunning() {
     running = !running;
-    document.getElementById('startButton').textContent = running ? 'Stop' : 'Start'; // toggle button text
+    document.getElementById('startButton').textContent = running ? 'Stop' : 'Start';
     if (running) {
-        runGame(); // start the game loop if running
+        runGame();
     }
 }
 
 // function to run the game loop at the specified FPS
 function runGame() {
     if (running) {
-        updateGrid(); // update grid state
-        drawGrid(); // draw the updated grid
-        setTimeout(runGame, 1000 / fps); // schedule the next frame
+        updateGrid();
+        drawGrid();
+        setTimeout(runGame, 1000 / fps);
     }
 }
 
