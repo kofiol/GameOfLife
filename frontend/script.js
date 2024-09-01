@@ -14,18 +14,25 @@ canvas.height = GRID_HEIGHT * CELL_SIZE;
 // initialize the grid and running state
 let grid = createGrid(GRID_HEIGHT, GRID_WIDTH);
 let running = false;
+let showGrid = true; // flag to control grid visibility
 
 // set up event listeners for UI controls
 document.getElementById('startButton').addEventListener('click', toggleRunning);
 document.getElementById('resetButton').addEventListener('click', resetGrid);
 document.getElementById('fpsRange').addEventListener('input', (e) => fps = parseInt(e.target.value));
 
+// event listener for the grid visibility toggle
+document.getElementById('gridToggle').addEventListener('change', (e) => {
+    showGrid = e.target.checked;
+    drawGrid(); // redraw the grid with the updated visibility setting
+});
+
 // event listener for canvas clicks to toggle cell state
 canvas.addEventListener('click', (event) => {
     const rect = canvas.getBoundingClientRect();
     const x = Math.floor((event.clientX - rect.left) / CELL_SIZE);
     const y = Math.floor((event.clientY - rect.top) / CELL_SIZE);
-    grid[y][x] = grid[y][x] === 1 ? 0 : 1; // togle cell state between 0 (dead) and 1 (alive)
+    grid[y][x] = grid[y][x] === 1 ? 0 : 1; // toggle cell state between 0 (dead) and 1 (alive)
     drawGrid(); // redraw the grid to reflect changes
 });
 
@@ -41,8 +48,10 @@ function drawGrid() {
         for (let x = 0; x < GRID_WIDTH; x++) {
             ctx.fillStyle = grid[y][x] === 1 ? 'white' : 'black'; // cell color
             ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE); // draw the cell
-            ctx.strokeStyle = 'white'; // stroke color
-            ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE); // cell border
+            if (showGrid) { // draw grid lines based on the flag
+                ctx.strokeStyle = 'white'; // stroke color
+                ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE); // cell border
+            }
         }
     }
 }
@@ -82,7 +91,7 @@ function getAliveNeighbors(y, x) {
 // function to start or stop the simulation
 function toggleRunning() {
     running = !running;
-    document.getElementById('startButton').textContent = running ? 'Stop' : 'Start'; // Toggle button text
+    document.getElementById('startButton').textContent = running ? 'Stop' : 'Start'; // toggle button text
     if (running) {
         runGame(); // start the game loop if running
     }
