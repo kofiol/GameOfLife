@@ -7,6 +7,7 @@ let zoom = 1;
 let offsetX = 0;
 let offsetY = 0;
 let isDragging = false;
+let lastMouseX, lastMouseY;
 
 // get the canvas element and its drawing context
 const canvas = document.getElementById('gameCanvas');
@@ -33,31 +34,39 @@ document.getElementById('gridToggle').addEventListener('change', (e) => {
     drawGrid();
 });
 
-// event listener for canvas clicks to toggle cell state
+// event listener for canvas mouse interactions
 canvas.addEventListener('mousedown', (event) => {
     if (event.button === 0) { // Left button
-        const rect = canvas.getBoundingClientRect();
-        const x = Math.floor((event.clientX - rect.left + offsetX) / (CELL_SIZE * zoom));
-        const y = Math.floor((event.clientY - rect.top + offsetY) / (CELL_SIZE * zoom));
-        grid[y][x] = grid[y][x] === 1 ? 0 : 1;
-        drawGrid();
-    } else if (event.button === 2) { // right button
+        isDragging = false;
+        lastMouseX = event.clientX;
+        lastMouseY = event.clientY;
+        setTimeout(() => {
+            if (!isDragging) {
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.floor((event.clientX - rect.left + offsetX) / (CELL_SIZE * zoom));
+                const y = Math.floor((event.clientY - rect.top + offsetY) / (CELL_SIZE * zoom));
+                grid[y][x] = grid[y][x] === 1 ? 0 : 1;
+                drawGrid();
+            }
+        }, 200); // Short delay to differentiate between click and drag
+    }
+});
+
+canvas.addEventListener('mousemove', (event) => {
+    if (event.buttons === 1) { // Left button is being held down
         isDragging = true;
-        canvas.style.cursor = 'grabbing';
+        const dx = event.clientX - lastMouseX;
+        const dy = event.clientY - lastMouseY;
+        offsetX -= dx;
+        offsetY -= dy;
+        lastMouseX = event.clientX;
+        lastMouseY = event.clientY;
+        drawGrid();
     }
 });
 
 canvas.addEventListener('mouseup', () => {
     isDragging = false;
-    canvas.style.cursor = 'default';
-});
-
-canvas.addEventListener('mousemove', (event) => {
-    if (isDragging) {
-        offsetX += event.movementX;
-        offsetY += event.movementY;
-        drawGrid();
-    }
 });
 
 // event listener for mouse wheel to zoom
@@ -81,13 +90,25 @@ function drawGrid() {
     for (let y = 0; y < GRID_HEIGHT; y++) {
         for (let x = 0; x < GRID_WIDTH; x++) {
             ctx.fillStyle = grid[y][x] === 1 ? 'white' : 'black';
-            ctx.fillRect((x * CELL_SIZE * zoom) + offsetX, (y * CELL_SIZE * zoom) + offsetY, CELL_SIZE * zoom, CELL_SIZE * zoom);
+            ctx.fillRect((x * CELL_SIZE * zoom) - offsetX, (y * CELL_SIZE * zoom) - offsetY, CELL_SIZE * zoom, CELL_SIZE * zoom);
             if (showGrid) {
-                ctx.strokeStyle = 'white';
-                ctx.strokeRect((x * CELL_SIZE * zoom) + offsetX, (y * CELL_SIZE * zoom) + offsetY, CELL_SIZE * zoom, CELL_SIZE * zoom);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.strokeRect((x * CELL_SIZE * zoom) - offsetX, (y * CELL_SIZE * zoom) - offsetY, CELL_SIZE * zoom, CELL_SIZE * zoom);
             }
         }
     }
+    
+    // crosshair
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 10, centerY);
+    ctx.lineTo(centerX + 10, centerY);
+    ctx.moveTo(centerX, centerY - 10);
+    ctx.lineTo(centerX, centerY + 10);
+    ctx.stroke();
 }
 
 // function to update the grid based on the rules
