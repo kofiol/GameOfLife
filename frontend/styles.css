@@ -1,0 +1,24 @@
+/* made by kofiol */
+body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: black;
+}
+
+canvas {
+    background-color: black;
+    border: transparent;
+}
+
+#controls {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    color: white;
+}
