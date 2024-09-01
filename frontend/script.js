@@ -4,6 +4,7 @@ const grid_width = 200; // number of cells in width
 const grid_height = 150; // number of cells in height
 const canvas = document.getElementById('gameCanvas'); // canvas element for drawing the grid
 const ctx = canvas.getContext('2d', { alpha: false }); // 2d context for drawing on the canvas
+
 canvas.width = grid_width * cell_size; // set canvas width based on grid width and cell size
 canvas.height = grid_height * cell_size; // set canvas height based on grid height and cell size
 
@@ -18,8 +19,11 @@ let grid = new Uint8Array(grid_width * grid_height); // grid to store cell state
 let running = false; // flag to control if the simulation is running
 let show_grid = true; // flag to toggle grid visibility
 let last_frame_time = 0; // timestamp of the last frame for fps calculation
+
 const fps_interval = 1000 / fps; // time interval between frames based on fps
 const cell_coords = new Float32Array(grid_width * grid_height * 2); // array to store cell coordinates
+
+
 // populate cell_coords with x and y positions for each cell
 for (let y = 0; y < grid_height; y++) {
     for (let x = 0; x < grid_width; x++) {
@@ -29,6 +33,7 @@ for (let y = 0; y < grid_height; y++) {
     }
 }
 
+
 // set up event listeners for ui controls
 document.getElementById('startButton').addEventListener('click', toggle_running); // start/stop button
 document.getElementById('resetButton').addEventListener('click', reset_grid); // reset button
@@ -37,25 +42,31 @@ document.getElementById('zoomRange').addEventListener('input', (e) => {
     zoom = parseFloat(e.target.value); // zoom slider
     draw_grid(); // redraw grid with new zoom level
 });
+
+
 document.getElementById('gridToggle').addEventListener('change', (e) => {
     show_grid = e.target.checked; // grid toggle checkbox
     draw_grid(); // redraw grid based on visibility
 });
 
+
 // file selection and drag-and-drop setup
 const file_input = document.getElementById('fileInput'); // file input element
 const drop_area = document.getElementById('dropArea'); // drop area for drag-and-drop
+
 
 // click to select file
 document.getElementById('fileSelectButton').addEventListener('click', () => file_input.click()); // button to trigger file input click
 
 file_input.addEventListener('change', handle_file); // handle file selection
 
+
 // drag-and-drop events
 drop_area.addEventListener('dragover', (e) => {
     e.preventDefault(); // prevent default behavior
     drop_area.classList.add('hover'); // add hover effect
 });
+
 
 drop_area.addEventListener('dragleave', () => drop_area.classList.remove('hover')); // remove hover effect
 
@@ -65,6 +76,7 @@ drop_area.addEventListener('drop', (e) => {
     const file = e.dataTransfer.files[0]; // get the dropped file
     if (file) handle_file({ target: { files: [file] } }); // process the file
 });
+
 
 // function to handle file selection and loading
 function handle_file(event) {
@@ -79,6 +91,7 @@ function handle_file(event) {
     }
 }
 
+
 // function to load structure from file content
 function load_structure(content) {
     const lines = content.split('\n'); // split content into lines
@@ -89,6 +102,7 @@ function load_structure(content) {
     }
     draw_grid(); // redraw the grid with loaded structure
 }
+
 
 // function to parse a line of the structure
 function parse_structure(line, y) {
@@ -108,25 +122,25 @@ function parse_structure(line, y) {
     }
 }
 
-// event listeners for canvas mouse interactions
-canvas.addEventListener('mousedown', handle_mouse_down); // mouse down event
-canvas.addEventListener('mousemove', handle_mouse_move); // mouse move event
-canvas.addEventListener('mouseup', () => is_dragging = false); // mouse up event
 
-// wheel event
-canvas.addEventListener('wheel', handle_wheel); // handle zoom with mouse wheel
+// event listeners for canvas mouse interactions
+canvas.addEventListener('mousedown', handle_mouse_down);
+canvas.addEventListener('mousemove', handle_mouse_move);
+canvas.addEventListener('mouseup', () => is_dragging = false);
+canvas.addEventListener('wheel', handle_wheel);
 
 // function to handle mouse down events
 function handle_mouse_down(event) {
-    if (event.button === 0) { // left button
-        is_dragging = false; // reset dragging state
-        last_mouse_x = event.clientX; // store mouse x position
-        last_mouse_y = event.clientY; // store mouse y position
+    if (event.button === 0) {
+        is_dragging = false;
+        last_mouse_x = event.clientX;
+        last_mouse_y = event.clientY;
         setTimeout(() => {
-            if (!is_dragging) toggle_cell(event); // toggle cell if not dragging
-        }, 200); // delay to differentiate between click and drag
+            if (!is_dragging) toggle_cell(event);
+        }, 200);
     }
 }
+
 
 // function to handle mouse move events
 function handle_mouse_move(event) {
@@ -142,15 +156,33 @@ function handle_mouse_move(event) {
     }
 }
 
+
 // function to handle zoom with mouse wheel
 function handle_wheel(event) {
-    event.preventDefault(); // prevent default behavior
-    const zoom_factor = 0.01; // zoom factor
-    zoom *= Math.pow(1.1, -event.deltaY * zoom_factor); // update zoom level
-    zoom = Math.min(Math.max(zoom, 0.1), 5); // clamp zoom level between 0.1 and 5
-    document.getElementById('zoomRange').value = zoom; // update zoom slider
-    draw_grid(); // redraw grid with new zoom level
+    event.preventDefault();
+    const zoom_factor = 0.01;
+    const zoom_delta = Math.pow(1.1, -event.deltaY * zoom_factor);
+  
+    // calculate zoom center based on cursor position
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    
+    // calculate the new zoom level
+    const new_zoom = zoom * zoom_delta;
+    zoom = Math.min(Math.max(new_zoom, 0.1), 5);
+    
+    // update zoom level in the slider
+    document.getElementById('zoomRange').value = zoom;
+    
+    // calculate the new offsets to maintain zoom center
+    const scale_ratio = new_zoom / zoom;
+    offset_x -= (mouseX / zoom - mouseX / new_zoom) * cell_size;
+    offset_y -= (mouseY / zoom - mouseY / new_zoom) * cell_size;
+    
+    draw_grid();
 }
+
 
 // function to toggle cell state
 function toggle_cell(event) {
@@ -163,6 +195,7 @@ function toggle_cell(event) {
         draw_grid(); // redraw grid
     }
 }
+
 
 // function to update grid based on game rules
 function update_grid() {
@@ -177,6 +210,7 @@ function update_grid() {
     grid = new_grid; // replace old grid with new grid
 }
 
+
 // function to count alive neighbors for a cell
 function count_alive_neighbors(x, y) {
     let count = 0; // initialize neighbor count
@@ -190,6 +224,7 @@ function count_alive_neighbors(x, y) {
     }
     return count; // return total count
 }
+
 
 // function to draw grid lines
 const grid_canvas = document.createElement('canvas'); // create a canvas for grid lines
@@ -211,6 +246,7 @@ function draw_grid_lines() {
     grid_ctx.stroke(); // apply stroke
 }
 
+
 // function to draw the grid on the canvas
 function draw_grid() {
     ctx.fillStyle = 'black'; // set background color
@@ -220,7 +256,7 @@ function draw_grid() {
     ctx.translate(-offset_x * zoom, -offset_y * zoom); // apply translation for panning
     ctx.scale(zoom, zoom); // apply scaling for zoom
 
-    ctx.fillStyle = 'white'; // set cell color
+    ctx.fillStyle = 'rgb(0, 255, 0)'; // set cell color
     for (let i = 0; i < grid.length; i++) {
         if (grid[i]) {
             const x = cell_coords[i * 2]; // get x position
@@ -235,12 +271,14 @@ function draw_grid() {
     ctx.restore(); // restore context
 }
 
+
 // function to start/stop the simulation
 function toggle_running() {
     running = !running; // toggle running state
     document.getElementById('startButton').textContent = running ? 'stop' : 'start'; // update button text
     if (running) requestAnimationFrame(run_simulation); // start simulation loop
 }
+
 
 // function to run the simulation
 function run_simulation(current_time) {
@@ -253,11 +291,13 @@ function run_simulation(current_time) {
     requestAnimationFrame(run_simulation); // request next frame
 }
 
+
 // function to reset the grid to initial state
 function reset_grid() {
     grid.fill(0); // set all cells to dead
     draw_grid(); // redraw grid
 }
+
 
 // utility function for debouncing
 function debounce(func, wait) {
@@ -271,6 +311,7 @@ function debounce(func, wait) {
         timeout = setTimeout(later, wait); // set new timeout
     };
 }
+
 
 // initial drawing of the grid
 draw_grid(); // draw the initial grid
