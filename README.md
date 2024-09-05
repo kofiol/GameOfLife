@@ -1,5 +1,5 @@
 # Conway's "Game of Life" Multiplayer 
 
-## **made by kofiol**
+## **Made by @kofiol**
 
 **Multiplayer web version of Conway's "Game of Life" built using JS**
